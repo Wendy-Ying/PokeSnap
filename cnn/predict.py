@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelBinarizer
 import os
 
 # Load the trained model
-model = load_model('object_20250103-130416.h5')
+model = load_model('object_20250103_162905.h5')
 
 # Initialize label binarizer to map the output of the model to human-readable labels
 label_binarizer = LabelBinarizer()
@@ -45,6 +45,18 @@ def segment_object(frame):
     largest_contour = max(contours, key=cv2.contourArea)
     hull = cv2.convexHull(largest_contour)
     
+    # Draw the convex hull on the mask (white area)
+    cv2.drawContours(convex_hull_mask, [hull], -1, (255), thickness=cv2.FILLED)
+    
+    # Create a black image of the same size as the original frame
+    black_frame = np.zeros_like(frame)
+
+    # Apply the convex hull mask to the original frame, keeping only the area inside the convex hull
+    frame_with_hull = cv2.bitwise_and(frame, frame, mask=convex_hull_mask)
+    
+    # Combine the black image with the segmented region (inside the convex hull)
+    blacked_out_frame = cv2.bitwise_or(black_frame, frame_with_hull)
+
     # Get the bounding rectangle of the convex hull
     x, y, w, h = cv2.boundingRect(hull)
     
@@ -56,7 +68,7 @@ def segment_object(frame):
     y_max = min(y + h + padding, frame.shape[0])
     
     # Crop the image with the padded bounding box
-    cropped_image = frame[y_min:y_max, x_min:x_max]
+    cropped_image = blacked_out_frame[y_min:y_max, x_min:x_max]
     
     # Make the cropped image square by adding black padding
     height, width = cropped_image.shape[:2]
@@ -71,6 +83,7 @@ def segment_object(frame):
     padded_image[y_offset:y_offset + height, x_offset:x_offset + width] = cropped_image
     
     return padded_image, otsu_thresholded
+
 
 def crop_to_object(image):
     """
@@ -106,13 +119,12 @@ if not cap.isOpened():
     exit()
 
 # Path to the image file
-# image_path = ["./dataset/enhanced/1/1.jpg", "./dataset/enhanced/1/2.jpg", "./dataset/enhanced/1/3.jpg", "./dataset/enhanced/1/4.jpg", "./dataset/enhanced/1/5.jpg", "./dataset/enhanced/1/6.jpg",
-#               "./dataset/enhanced/2/1.jpg", "./dataset/enhanced/2/2.jpg", "./dataset/enhanced/2/3.jpg", "./dataset/enhanced/2/4.jpg", "./dataset/enhanced/2/5.jpg", "./dataset/enhanced/2/6.jpg",
-#               "./dataset/enhanced/3/1.jpg", "./dataset/enhanced/3/2.jpg", "./dataset/enhanced/3/3.jpg", "./dataset/enhanced/3/4.jpg", "./dataset/enhanced/3/5.jpg", "./dataset/enhanced/3/6.jpg",
-#               "./dataset/enhanced/4/1.jpg", "./dataset/enhanced/4/2.jpg", "./dataset/enhanced/4/3.jpg", "./dataset/enhanced/4/4.jpg", "./dataset/enhanced/4/5.jpg", "./dataset/enhanced/4/6.jpg",
-#               "./dataset/enhanced/5/1.jpg", "./dataset/enhanced/5/2.jpg", "./dataset/enhanced/5/3.jpg", "./dataset/enhanced/5/4.jpg", "./dataset/enhanced/5/5.jpg", "./dataset/enhanced/5/6.jpg",
-#               "./dataset/enhanced/6/1.jpg", "./dataset/enhanced/6/2.jpg", "./dataset/enhanced/6/3.jpg", "./dataset/enhanced/6/4.jpg", "./dataset/enhanced/6/5.jpg", "./dataset/enhanced/6/6.jpg"]
-image_path = [os.path.join("restored_images", file) for file in os.listdir("restored_images") if file.endswith(".png")]
+image_path = ["./../dataset/initial_single/1/1.jpg", "./../dataset/initial_single/1/2.jpg", "./../dataset/initial_single/1/3.jpg", "./../dataset/initial_single/1/4.jpg", "./../dataset/initial_single/1/5.jpg", "./../dataset/initial_single/1/6.jpg",
+              "./../dataset/initial_single/2/1.jpg", "./../dataset/initial_single/2/2.jpg", "./../dataset/initial_single/2/3.jpg", "./../dataset/initial_single/2/4.jpg", "./../dataset/initial_single/2/5.jpg", "./../dataset/initial_single/2/6.jpg",
+              "./../dataset/initial_single/3/1.jpg", "./../dataset/initial_single/3/2.jpg", "./../dataset/initial_single/3/3.jpg", "./../dataset/initial_single/3/4.jpg", "./../dataset/initial_single/3/5.jpg", "./../dataset/initial_single/3/6.jpg",
+              "./../dataset/initial_single/4/1.jpg", "./../dataset/initial_single/4/2.jpg", "./../dataset/initial_single/4/3.jpg", "./../dataset/initial_single/4/4.jpg", "./../dataset/initial_single/4/5.jpg", "./../dataset/initial_single/4/6.jpg",
+              "./../dataset/initial_single/5/1.jpg", "./../dataset/initial_single/5/2.jpg", "./../dataset/initial_single/5/3.jpg", "./../dataset/initial_single/5/4.jpg", "./../dataset/initial_single/5/5.jpg", "./../dataset/initial_single/5/6.jpg",
+              "./../dataset/initial_single/6/1.jpg", "./../dataset/initial_single/6/2.jpg", "./../dataset/initial_single/6/3.jpg", "./../dataset/initial_single/6/4.jpg", "./../dataset/initial_single/6/5.jpg", "./../dataset/initial_single/6/6.jpg"]
 
 i = 0
 while True:
@@ -143,18 +155,23 @@ while True:
     # Ensure the cropped image is not empty
     if padded_segmented is not None and np.any(padded_segmented):
         # Resize the image to 56x56 pixels (same size as the training images)
-        resized = cv2.resize(padded_segmented, (112, 112))
+        resized = cv2.resize(padded_segmented, (56, 56))
         cv2.imshow("Resized Image", resized)
 
+        # # Flatten the RGB channels into a 1D array
+        # rgb = cv2.cvtColor(resized, cv2.COLOR_BGR2RGB)
+        # pixels_values_R = rgb[:, :, 0].flatten()
+        # pixels_values_G = rgb[:, :, 1].flatten()
+        # pixels_values_B = rgb[:, :, 2].flatten()
         # Flatten the HSV channels into a 1D array
         hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
-        pixel_values_H = hsv[:, :, 0].flatten()  # H channel
-        pixel_values_S = hsv[:, :, 1].flatten()  # S channel
-        pixel_values_V = hsv[:, :, 2].flatten()  # V channel
-
+        pixels_values_H = hsv[:, :, 0].flatten()
+        pixels_values_S = hsv[:, :, 1].flatten()
+        pixels_values_V = hsv[:, :, 2].flatten()
+        
         # Prepare the data for prediction (reshape to match the model input)
-        x_input = np.concatenate([pixel_values_H, pixel_values_S, pixel_values_V])
-        x_input = x_input.reshape(1, 112, 112, 3)  # Reshape to match the input shape of the model
+        x_input = np.concatenate([pixels_values_H, pixels_values_S, pixels_values_V])
+        x_input = x_input.reshape(1, 56, 56, 3)  # Reshape to match the input shape of the model
 
         # Perform prediction
         prediction = model.predict(x_input)

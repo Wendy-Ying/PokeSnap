@@ -29,11 +29,11 @@ def segment_object(frame):
     return segmented
 
 # Set the directory for input images
-input_directory = "./dataset/enhanced_single"
+input_directory = "./../dataset/enhanced_single"
 
 # Create CSV file and write header row
-with open("objects_single.csv", mode='w', newline='', encoding='utf-8') as csvfile:
-    fieldnames = ['label'] + [f'pixel_H{i}' for i in range(1, 12545)] + [f'pixel_S{i}' for i in range(1, 12545)] + [f'pixel_V{i}' for i in range(1, 12545)]  # Set column names
+with open("objects_single_hsv.csv", mode='w', newline='', encoding='utf-8') as csvfile:
+    fieldnames = ['label'] + [f'pixel_R{i}' for i in range(1, 3137)] + [f'pixel_G{i}' for i in range(1, 3137)] + [f'pixel_B{i}' for i in range(1, 3137)]  # Set column names
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
 
@@ -67,19 +67,25 @@ with open("objects_single.csv", mode='w', newline='', encoding='utf-8') as csvfi
                 # Ensure the segmented object is not empty
                 if segmented is not None and np.any(segmented):
                     # Resize the image to 56x56 pixels
-                    resized = cv2.resize(segmented, (112, 112))
+                    resized = cv2.resize(segmented, (56, 56))
 
-                    # Flatten the HSV channels into a 1D array
-                    pixel_values_H = resized[:, :, 0].flatten()  # H channel
-                    pixel_values_S = resized[:, :, 1].flatten()  # S channel
-                    pixel_values_V = resized[:, :, 2].flatten()  # V channel
+                    # # Extract RGB channels from the resized image
+                    # pixel_values_R = resized[:, :, 2].flatten()  # Red channel
+                    # pixel_values_G = resized[:, :, 1].flatten()  # Green channel
+                    # pixel_values_B = resized[:, :, 0].flatten()  # Blue channel
+                    
+                    # Extract HSV channels from the resized image
+                    hsv = cv2.cvtColor(resized, cv2.COLOR_BGR2HSV)
+                    pixel_values_H = hsv[:, :, 0].flatten()  # Hue channel
+                    pixel_values_S = hsv[:, :, 1].flatten()  # Saturation channel
+                    pixel_values_V = hsv[:, :, 2].flatten()  # Value channel
 
                     # Write data to the CSV file
                     row_data = {'label': object_label}
-                    for idx, (pixel_H, pixel_S, pixel_V) in enumerate(zip(pixel_values_H, pixel_values_S, pixel_values_V), start=1):
-                        row_data[f'pixel_H{idx}'] = pixel_H
-                        row_data[f'pixel_S{idx}'] = pixel_S
-                        row_data[f'pixel_V{idx}'] = pixel_V
+                    for idx, (pixel_R, pixel_G, pixel_B) in enumerate(zip(pixel_values_H, pixel_values_S, pixel_values_V), start=1):
+                        row_data[f'pixel_R{idx}'] = pixel_R
+                        row_data[f'pixel_G{idx}'] = pixel_G
+                        row_data[f'pixel_B{idx}'] = pixel_B
                     
                     writer.writerow(row_data)
                 else:
