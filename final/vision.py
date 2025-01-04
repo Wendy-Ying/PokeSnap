@@ -189,12 +189,19 @@ class ObjectSegmentation:
         cropped_image = final_image[y_min:y_max, x_min:x_max]
         
         height, width = cropped_image.shape[:2]
-        max_dim = max(height, width)
-        padded_image = np.zeros((max_dim, max_dim, 3), dtype=np.uint8)
-        y_offset = (max_dim - height) // 2
-        x_offset = (max_dim - width) // 2
-        padded_image[y_offset:y_offset + height, x_offset:x_offset + width] = cropped_image
-        padded_image = cv2.resize(padded_image, (512, 512))
+        target_height = height
+        target_width = int(target_height * 4 / 3)
+
+        if target_width < width:
+            target_width = width
+            target_height = int(target_width * 3 / 4)
+
+        top_padding = (target_height - height) // 2
+        left_padding = (target_width - width) // 2
+
+        padded_image = np.zeros((target_height, target_width, 3), dtype=np.uint8)
+        padded_image[top_padding:top_padding + height, left_padding:left_padding + width] = cropped_image
+        padded_image = cv2.resize(padded_image, (384, 288))
 
         mask = cv2.cvtColor(padded_image, cv2.COLOR_BGR2GRAY)
         _, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
@@ -223,7 +230,7 @@ def main():
     class_names = ['', 'pikachu', 'squirtle', 'charmander', 'bulbasaur', 'jiggypuff', 'psyduck']
     
     bg = cv2.imread('bg.jpg')
-    bg = cv2.resize(bg, (512, 512))
+    bg = cv2.resize(bg, (384, 288))
     
     deblurrer = NonLinearDeblur()
     segmenter = ObjectSegmentation()
