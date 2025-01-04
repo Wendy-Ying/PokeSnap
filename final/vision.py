@@ -94,7 +94,7 @@ class ModelPredictor:
         features_scaled = self.scaler.transform([features])
         prediction = self.model.predict(features_scaled)
         print(self.class_names[prediction[0]])
-        return prediction[0]
+        return self.class_names[prediction[0]]
 
 class NonLinearDeblur:
     def __init__(self, padding=50, alpha=0.8, R=1, snr_h=1, snr_s=0.95, snr_v=0.15):
@@ -220,42 +220,3 @@ class ObjectSegmentation:
         oil_painting_image = cv2.xphoto.oilPainting(blended_image, 4, 1)
         
         return oil_painting_image
-
-
-def main():
-    cap = cv2.VideoCapture(0)
-    
-    model_filename = 'ada_boost_model.joblib'
-    scaler_filename = 'scaler.joblib'
-    class_names = ['', 'pikachu', 'squirtle', 'charmander', 'bulbasaur', 'jiggypuff', 'psyduck']
-    
-    bg = cv2.imread('bg.jpg')
-    bg = cv2.resize(bg, (384, 288))
-    
-    deblurrer = NonLinearDeblur()
-    segmenter = ObjectSegmentation()
-    image_processor = ImageProcessor(resize_dim=(56, 56))
-    model, scaler = image_processor.load_model_and_scaler(model_filename, scaler_filename)
-    model_predictor = ModelPredictor(model, scaler, class_names)
-
-    try:
-        while True:
-            ret, image = cap.read()
-            if not ret:
-                break
-            
-            # extract features and predict
-            features = image_processor.extract_features(image)
-            prediction = model_predictor.predict(features)
-            
-            # beautify image
-            deblurred_image = deblurrer.deblur_and_enhance(image)
-            final_result = segmenter.segment_object(deblurred_image, bg)
-            
-            cv2.imshow("Final Result", final_result)
-            cv2.waitKey(10)
-    except KeyboardInterrupt:
-        cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
