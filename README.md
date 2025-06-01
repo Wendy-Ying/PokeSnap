@@ -18,3 +18,15 @@ All task are integrated in [camera.py](final/camera.py) and [vision.py](final/vi
 
 ## printer
 - Use [printer](camera/printer_test.py) to print the photo.
+
+## Contributors
+
+The project was a joint effort by Weiyu Chen and me.
+
+<a href="https://github.com/Wendy-Ying">
+  <img src="https://avatars.githubusercontent.com/u/143325815?v=4" width="100" />
+</a>
+
+<a href="https://github.com/VivianChencwy">
+  <img src="https://avatars.githubusercontent.com/u/128114805?v=4"  width="100"/>
+</a>
